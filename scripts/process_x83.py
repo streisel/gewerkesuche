@@ -1,13 +1,10 @@
 from lxml import etree
-import sys
 
 def extract_x83_data(file_path):
     try:
-        # XML-Datei parsen
         tree = etree.parse(file_path)
         root = tree.getroot()
 
-        # Relevante Informationen sammeln
         result = []
 
         # Projektinformationen
@@ -21,16 +18,30 @@ def extract_x83_data(file_path):
         for boq in root.findall(".//{http://www.gaeb.de/GAEB_DA_XML/DA83/3.2}BoQ"):
             for item in boq.findall(".//{http://www.gaeb.de/GAEB_DA_XML/DA83/3.2}Item"):
                 pos_id = item.attrib.get("ID", "Unbekannt")
-                short_text = item.find(".//{http://www.gaeb.de/GAEB_DA_XML/DA83/3.2}ShortText")
-                pos_info = f"Position {pos_id}:"
-                if short_text is not None:
-                    pos_info += f" {short_text.text.strip()}"
-                result.append(pos_info)
+                short_text = item.find("{http://www.gaeb.de/GAEB_DA_XML/DA83/3.2}ShortText")
+                description = item.find("{http://www.gaeb.de/GAEB_DA_XML/DA83/3.2}Description")
+
+                # Langtexte extrahieren
+                detailed_texts = []
+                if description is not None:
+                    for sub_text in description.iter():
+                        if sub_text.text and sub_text.text.strip():
+                            detailed_texts.append(sub_text.text.strip())
+
+                # Zusammenfassung der Position
+                position_summary = f"Position {pos_id}:"
+                if short_text is not None and short_text.text:
+                    position_summary += f" {short_text.text.strip()}"
+                if detailed_texts:
+                    position_summary += f" Details: {' '.join(detailed_texts)}"
+
+                result.append(position_summary)
 
         return "\n".join(result)
 
     except Exception as e:
         return f"Fehler bei der Verarbeitung der Datei: {e}"
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
